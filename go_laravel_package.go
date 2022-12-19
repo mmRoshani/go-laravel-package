@@ -3,9 +3,12 @@ package go_laravel_package
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
+	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/joho/godotenv"
 )
 
@@ -27,6 +30,7 @@ type GoLaravelPackage struct {
 	License     string
 	Repository  string
 	RootPath    string
+	Routes      *chi.Mux
 	Version     string
 	config      config
 }
@@ -51,14 +55,14 @@ func (glp *GoLaravelPackage) New(rootPath string) error {
 	pathConfig := initPaths{
 		rootPath: rootPath,
 		folderNames: []string{
-			"handlers",
-			"migrations",
-			"views",
 			"data",
-			"public",
-			"tmp",
+			"handlers",
 			"logs",
 			"middleware",
+			"migrations",
+			"public",
+			"tmp",
+			"views",
 		},
 	}
 
@@ -102,8 +106,10 @@ func (glp *GoLaravelPackage) New(rootPath string) error {
 	glp.config.renderer = os.Getenv("RENDERER")
 
 	infoLog, errorLog := glp.startLoggers()
-	glp.InfoLog = infoLog
 	glp.ErrorLog = errorLog
+	glp.InfoLog = infoLog
+
+	glp.Routes = glp.routes().(*chi.Mux)
 
 	return nil
 }
@@ -133,11 +139,27 @@ func (glp *GoLaravelPackage) checkDotEnv(path string) error {
 
 func (glp *GoLaravelPackage) startLoggers() (*log.Logger, *log.Logger) {
 
-	var infoLog *log.Logger
 	var errorLog *log.Logger
+	var infoLog *log.Logger
 
-	infoLog = log.New(os.Stdout, "[INFO]\t", log.Ldate|log.Ltime)
 	errorLog = log.New(os.Stdout, "[ERROR]\t", log.Ldate|log.Ltime|log.Lshortfile)
+	infoLog = log.New(os.Stdout, "[INFO]\t", log.Ldate|log.Ltime)
 
 	return infoLog, errorLog
+}
+
+// http server opener
+func (glp *GoLaravelPackage) ListenAndServe() {
+	server := &http.Server{
+		Addr:         fmt.Sprintf(":%s", glp.config.port),
+		ErrorLog:     glp.ErrorLog,
+		Handler:      glp.routes(),
+		IdleTimeout:  25 * time.Second,
+		ReadTimeout:  25 * time.Second,
+		WriteTimeout: 120 * time.Second,
+	}
+
+	glp.InfoLog.Printf("Server start listening on port %s", glp.config.port)
+	err := server.ListenAndServe()
+	glp.ErrorLog.Fatal(err)
 }
