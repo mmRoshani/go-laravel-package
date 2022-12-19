@@ -11,6 +11,11 @@ import (
 
 const version = "0.0.1"
 
+/*
+glp, go laravel package is accessible
+for any other project
+that use it
+*/
 type GoLaravelPackage struct {
 	AppName     string
 	Author      string
@@ -23,6 +28,14 @@ type GoLaravelPackage struct {
 	Repository  string
 	RootPath    string
 	Version     string
+	config      config
+}
+
+// glp configuration
+
+type config struct {
+	port     string
+	renderer string
 }
 
 func (glp *GoLaravelPackage) New(rootPath string) error {
@@ -62,9 +75,9 @@ func (glp *GoLaravelPackage) New(rootPath string) error {
 			2.2	reading the .env file as it holding the project
 				configurations, then populate them
 			 	as system environment
-			2.3 set the essential environments and version
-				in GoLaravelPackage struct as
-				application started
+			2.3 set the essential environments and configuration
+			 	in GoLaravelPackage struct
+				as application started
 	*/
 
 	// 2.1
@@ -81,13 +94,12 @@ func (glp *GoLaravelPackage) New(rootPath string) error {
 		return err
 	}
 	// 2.3
+	glp.RootPath = rootPath
+	glp.Version = version
+
 	glp.Debug, _ = strconv.ParseBool(os.Getenv("DEBUG"))
-
-	/*
-		phase 3:
-
-			3.1 create info and error loggers
-	*/
+	glp.config.port = os.Getenv("PORT")
+	glp.config.renderer = os.Getenv("RENDERER")
 
 	infoLog, errorLog := glp.startLoggers()
 	glp.InfoLog = infoLog
